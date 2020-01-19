@@ -14,7 +14,7 @@ app.get('/', function(request, response) {
     var text = 'Write about your today.';
     var html = template.HTML(title, text, `
     <a href='/list'>list</a>
-    <a href='/write'>write</a>
+    <a href='/write'>write</a><br>
     `);
     response.send(html);
 });
@@ -22,7 +22,6 @@ app.get('/', function(request, response) {
 app.get('/list', function(request, response) {
     fs.readdir('./data', function(error, filelist) {
         var title = "Diary List";
-        console.log(filelist);
         var list = template.List(filelist);
         var html = template.HTML(title, list, `
         <a href='/list'>list</a>
@@ -34,12 +33,16 @@ app.get('/list', function(request, response) {
 
 app.get('/page/:pageId', function(request, response) {
     var filteredId = path.parse(request.params.pageId).base;
-    fs.readFile(`./data/${filteredId}`, 'utf8', function(err, description) {
+    fs.readFile(`./data/${filteredId}`, 'utf8', function(err, text) {
         var title = request.params.pageId;
-        var html = template.HTML(title, description, `
+        var html = template.HTML(title, text, `
         <a href='/list'>list</a>
         <a href='/write'>write</a>
-        <a href='/update/${title}'>update</a><br>
+        <a href='/update/${title}'>update</a>
+        <form action="/delete/${title}" method="post">
+            <input type="hidden" name="id" value="${title}">
+            <input type="submit" value="delete">
+        </form>
         `);
         response.send(html); 
     });
@@ -90,17 +93,28 @@ app.get('/update/:pageId', function(request, response){
     });
 });
    
-  app.post('/update_process', function(request, response){
+app.post('/update_process', function(request, response){
     var post = request.body;
     var id = post.id;
     var title = post.title;
     var text = post.text;
     fs.rename(`data/${id}`, `data/${title}`, function(error){
-      fs.writeFile(`data/${title}`, text, 'utf8', function(err){
+        fs.writeFile(`data/${title}`, text, 'utf8', function(err){
         response.redirect(`/page/${title}`);
-      })
+        });
     });
-  });
+});
+
+app.post('/delete/:pageId', function(request, response) {
+    var post = request.body;
+    var id = post.id;
+    console.log("qpqp");
+    fs.unlink(`data/${id}`, function(err) {
+        console.log("oo");
+        response.redirect('/');
+    });
+});
+
 
 app.listen(3000, function() {
     console.log('Example app listening on port 3000!');
