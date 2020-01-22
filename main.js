@@ -1,37 +1,27 @@
 var express = require('express')
 var app = express()
-var fs = require('fs');
-var template = require('./lib/template.js');
 var bodyParser = require('body-parser');
 var compression = require('compression')
-var pageRouters = require('./routes/page.js');
+var pageRouters = require('./routes/page');
+var homeRouters = require('./routes/home');
+var authRouters = require('./routes/auth');
+var session = require('express-session')
+var FileStore = require('session-file-store')(session)
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(compression());
 
+//아래는 session을 실제로 미들웨어로써 실제 이 앱에 설치하는 코드.
+app.use(session({
+  secret: 'asadlfkj!@#!@#dfgasdg',
+  resave: false,
+  saveUninitialized: true,
+  store:new FileStore()
+}))
+
+app.use('/', homeRouters);
 app.use('/page', pageRouters);
-
-app.get('/', function(request, response) {
-    var title = 'My Own Diary';
-    var text = 'Write about your today.';
-    var html = template.HTML(title, text, `
-    <a href='/list'>list</a>
-    <a href='/page/write'>write</a><br>
-    `);
-    response.send(html);
-});
-
-app.get('/list', function(request, response) {
-    fs.readdir('./data', function(error, filelist) {
-        var title = "Diary List";
-        var list = template.List(filelist);
-        var html = template.HTML(title, list, `
-        <a href='/list'>list</a>
-        <a href='/page/write'>write</a>
-        `);
-        response.send(html);
-    });
-});
+app.use('/auth', authRouters);
 
 
 app.listen(3000, function() {

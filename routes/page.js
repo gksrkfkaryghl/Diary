@@ -1,8 +1,22 @@
-var express = require('express')
+var express = require('express');
 var router = express.Router();
 var path = require('path');
 var fs = require('fs');
 var template = require('../lib/template.js');
+var auth = require('../lib/auth');
+
+
+router.get('/list', function(request, response) {
+    fs.readdir('data', function(error, filelist) {
+        var title = "Diary List";
+        var list = template.List(filelist);
+        var html = template.HTML(title, list, `
+        <a href='/page/list'>list</a>
+        <a href='/page/write'>write</a>
+        `, auth.statusUI(request, response));
+        response.send(html);
+    });
+});
 
 router.get('/write', function(request, response) {
     var title = 'Write';
@@ -12,7 +26,7 @@ router.get('/write', function(request, response) {
     <p><textarea name='text' cols="80" rows="40" placeholder="How was your day?"></textarea></p>
     <input type="submit" value="save">
     </form>
-    `, '');
+    `, '', auth.statusUI(request, response));
     response.send(html);
 });
 
@@ -43,7 +57,7 @@ router.get('/update/:pageId', function(request, response){
         </form>
         `,
         `<a href="/page/write">write</a> <a href="/page/${title}">update</a>`,
-        ''
+        '', auth.statusUI(request, response)
         );
     response.send(html);
     });
@@ -74,14 +88,14 @@ router.get('/:pageId', function(request, response) {
     fs.readFile(`./data/${filteredId}`, 'utf8', function(err, text) {
         var title = request.params.pageId;
         var html = template.HTML(title, text, `
-        <a href='/list'>list</a>
+        <a href='/page/list'>list</a>
         <a href='/page/write'>write</a>
         <a href='/page/update/${title}'>update</a>
         <form action="/page/delete" method="post">
             <input type="hidden" name="id" value="${title}">
             <input type="submit" value="delete">
         </form>
-        `);
+        `, auth.statusUI(request, response));
         response.send(html); 
     });
 });
