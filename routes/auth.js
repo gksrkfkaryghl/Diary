@@ -29,10 +29,11 @@ router.get('/login', function(request, response) {
 //     }
 // });
 
-// router.get('/logout', function(request, response) {
-//     request.session.destroy(function(err) {
-//         response.redirect('/');
-//     })
-// })
+router.get('/logout', function(request, response) {
+    request.logout();
+    request.session.save(function(err) {
+        response.redirect('/');
+    });
+});
 
 module.exports = router;
