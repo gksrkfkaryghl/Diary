@@ -3,8 +3,16 @@ var router = express.Router();
 var template = require('../lib/template.js');
 
 router.get('/login', function(request, response) {
+    var fmsg = request.flash();
+    console.log('1',request.flash());
+    var feedback = '';
+    if(fmsg.error) {
+        console.log('2',fmsg);
+        feedback = fmsg.error;
+    }
     var title = 'login';
     var html = template.HTML(title, `
+    <div>${feedback}</div>
     <form action='/auth/login_process' method="post">
     <p>id: <input type="text" name="id"></p>
     <p>password: <input type="password" name="password"></p>

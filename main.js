@@ -7,6 +7,7 @@ var homeRouters = require('./routes/home');
 var authRouters = require('./routes/auth');
 var session = require('express-session')
 var FileStore = require('session-file-store')(session)
+var flash = require('connect-flash');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(compression());
@@ -21,6 +22,9 @@ app.use(session({
   saveUninitialized: true,
   store:new FileStore()
 }));
+
+app.use(flash());
+
 
 var authData = {
   id: 'Jang',
@@ -51,25 +55,21 @@ passport.use(new LocalStrategy(
   function(username, password, done) {
     if(username === authData.id) {
       if(password === authData.password) {
-        return done(null, authData, {
-          message: 'Welcome.'
-        });
+        return done(null, authData);
       } else {
-        return done(null, false, {
-          message: 'Incorrect password.'
-        });
+        return done(null, false);
       }
     } else {
-      return done(null, false, {
-        message: 'Incorrect ID.'
-      });
+      return done(null, false);
     }
   }
 ));
 
 app.post('/auth/login_process', passport.authenticate('local', { 
   successRedirect: '/',
-  failureRedirect: '/auth/login' 
+  failureRedirect: '/auth/login',
+  successFlash: 'Welcome.',
+  failureFlash: 'Invalid username or password.'
 }));
 
 app.use('/', homeRouters);

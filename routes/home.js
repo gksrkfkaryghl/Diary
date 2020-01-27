@@ -5,9 +5,15 @@ var auth = require('../lib/auth');
 
 
 router.get('/', function(request, response) {
+    var fmsg = request.flash();
+    var feedback = '';
+    if(fmsg.success) {
+        feedback = fmsg.success[0];
+    }
     var title = 'My Own Diary';
     var text = 'Write about your today.';
     var html = template.HTML(title, text, `
+    <div>${feedback}</div>
     <a href='/page/list'>list</a>
     <a href='/page/write'>write</a><br>
     `, auth.statusUI(request, response));
