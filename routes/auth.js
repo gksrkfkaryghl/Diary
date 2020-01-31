@@ -1,6 +1,9 @@
 var express = require('express');
 var router = express.Router();
 var template = require('../lib/template.js');
+var ids = require('short-id');
+var db = require('../lib/db');
+
 
 module.exports = function(passport) {
     router.get('/login', function(request, response) {
@@ -41,6 +44,52 @@ module.exports = function(passport) {
         successFlash: 'Welcome.',
         failureFlash: 'Invalid username or password.'
     }));
+
+
+    router.get('/register', function(request, response) {
+        var fmsg = request.flash();
+        var feedback = '';
+        if(fmsg.error) {
+            feedback = fmsg.error;
+        }
+        var title = 'register';
+        var html = template.HTML(title, `
+        <div>${feedback}</div>
+        <form action='/auth/register_process' method="post">
+        <p>id: <input type="text" name="id"></p>
+        <p>password: <input type="password" name="password"></p>
+        <p>password-conform: <input type="password" name="password2"></p>
+        <p>nickname: <input type="text" name="nickname"></p>
+        <input type="submit">
+        </form>
+        `, '', '');
+        response.send(html);
+    });
+
+    router.post('/register_process', function(request, response) {
+        var post = request.body;
+        var id = post.id;
+        var pwd = post.password;
+        var pwd2 = post.password2;
+        var nickname = post.nickname;
+        if(pwd !== pwd2) {
+            request.flash('error', 'Password should be the same.');
+            response.redirect('/auth/register');
+        } else {
+            var user = {
+                shortid: ids.generate(),
+                id: id,
+                password: pwd,
+                nickname: nickname
+            };
+            db.get('users').push(user).write();
+            request.login(user, function(err) {
+                if (err) { return next(err); }
+                return response.redirect('/');
+            });
+        }
+    });
+    
     
     router.get('/logout', function(request, response) {
         request.logout();

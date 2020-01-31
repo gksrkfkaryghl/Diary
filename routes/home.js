@@ -9,6 +9,8 @@ router.get('/', function(request, response) {
     var feedback = '';
     if(fmsg.success) {
         feedback = fmsg.success[0];
+    } else if(fmsg.error) {
+        feedback = fmsg.error[0];
     }
     var title = 'My Own Diary';
     var text = 'Write about your today.';

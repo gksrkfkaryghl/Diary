@@ -4,18 +4,19 @@ var path = require('path');
 var fs = require('fs');
 var template = require('../lib/template.js');
 var auth = require('../lib/auth');
+var ids = require('short-id');
+var db = require('../lib/db');
 
 
 router.get('/list', function(request, response) {
-    fs.readdir('data', function(error, filelist) {
-        var title = "Diary List";
-        var list = template.List(filelist);
-        var html = template.HTML(title, list, `
-        <a href='/page/list'>list</a>
-        <a href='/page/write'>write</a>
-        `, auth.statusUI(request, response));
-        response.send(html);
-    });
+    request.list = db.get('pages').value();
+    var list = template.List(request.list);
+    var title = "Diary List";
+    var html = template.HTML(title, list, `
+    <a href='/page/list'>list</a>
+    <a href='/page/write'>write</a>
+    `, auth.statusUI(request, response));
+    response.send(html);
 });
 
 router.get('/write', function(request, response) {
@@ -38,9 +39,15 @@ router.post('/write_process', function(request, response) {
     var post = request.body;
     var title = post.title;
     var text = post.text;
-    fs.writeFile(`data/${title}`, text, 'utf8', function(err){
-        response.redirect('/');
-    });
+    var id = ids.generate();
+    db.get('pages').push({
+        id:id,
+        title:title,
+        text:text,
+        user_nickname: request.user.nickname,
+        user_id: request.user.id
+    }).write();
+    response.redirect(`/page/${id}`)
 });
 
 
@@ -48,12 +55,18 @@ router.get('/update/:pageId', function(request, response){
     if(!auth.isOwner(request, response)){
         response.redirect('/auth/login');
     } else {
-        var title = request.params.pageId;
-        fs.readFile(`data/${title}`, 'utf8', function(err, text){
+        var page = db.get('pages').find({id:request.params.pageId}).value();
+        if(page.user_nickname !== request.user.nickname) {
+            request.flash('error', 'Only the writer can access.');
+            return response.redirect('/');
+        }
+        var title = page.title;
+        var text = page.text;
+        var id = page.id;
         var html = template.HTML(title,
             `
             <form action="/page/update_process" method="post">
-            <input type="hidden" name="id" value="${title}">
+            <input type="hidden" name="id" value="${id}">
             <p><input type="text" name="title" placeholder="title" value="${title}"></p>
             <p>
             <textarea name="text" placeholder="How was your day?">${text}</textarea>
@@ -63,11 +76,10 @@ router.get('/update/:pageId', function(request, response){
             </p>
             </form>
             `,
-            `<a href="/page/write">write</a> <a href="/page/${title}">update</a>`,
+            `<a href="/page/write">write</a> <a href="/page/${id}">update</a>`,
             '', auth.statusUI(request, response)
             );
         response.send(html);
-        });
     }
 });
    
@@ -76,11 +88,10 @@ router.post('/update_process', function(request, response){
     var id = post.id;
     var title = post.title;
     var text = post.text;
-    fs.rename(`data/${id}`, `data/${title}`, function(error){
-        fs.writeFile(`data/${title}`, text, 'utf8', function(err){
-        response.redirect(`/page/${title}`);
-        });
-    });
+    db.get('pages').find({id:id}).assign({
+        title:title, text:text
+    }).write();
+    response.redirect(`/page/${id}`)
 });
 
 router.post('/delete', function(request, response) {
@@ -89,31 +100,47 @@ router.post('/delete', function(request, response) {
     } else {
         var post = request.body;
         var id = post.id;
-        fs.unlink(`data/${id}`, function(err) {
-            response.redirect('/');
-        });
+        var page = db.get('pages').find({id:id}).value();
+        if(page.user_nickname !== request.user.nickname) {
+            request.flash('error', 'Only the writer can delete this page.');
+        } else {
+            db.get('pages').remove({id:id}).write();
+            return response.redirect('/');
+        }
+        response.redirect(`/page/${id}`);
     }
 });
 
 router.get('/:pageId', function(request, response) {
     if(!auth.isOwner(request, response)) {
-        response.redirect('/auth/login');
-    } else {
-        var filteredId = path.parse(request.params.pageId).base;
-        fs.readFile(`./data/${filteredId}`, 'utf8', function(err, text) {
-            var title = request.params.pageId;
-            var html = template.HTML(title, text, `
-            <a href='/page/list'>list</a>
-            <a href='/page/write'>write</a>
-            <a href='/page/update/${title}'>update</a>
-            <form action="/page/delete" method="post">
-                <input type="hidden" name="id" value="${title}">
-                <input type="submit" value="delete">
-            </form>
-            `, auth.statusUI(request, response));
-            response.send(html); 
-        });
+        return response.redirect('/auth/login');
     }
+    var fmsg = request.flash();
+    var feedback = '';
+    if(fmsg.error) {
+        feedback = fmsg.error;
+    }
+    var page = db.get('pages').find({
+        id:request.params.pageId
+    }).value();
+    var title = page.title;
+    var text = page.text;
+    var id = page.id;
+    var user = db.get('users').find({
+        nickname:page.user_nickname
+    }).value();
+    var html = template.HTML(title, text, `
+    <a href='/page/list'>list</a>
+    <a href='/page/write'>write</a>
+    <a href='/page/update/${id}'>update</a>
+    <form action="/page/delete" method="post">
+        <input type="hidden" name="id" value="${id}">
+        <input type="submit" value="delete">
+    </form>
+    <div>${feedback}</div>
+    <div>writer: ${user.nickname}</div>
+    `, auth.statusUI(request, response));
+    response.send(html); 
 });
 
 module.exports = router;
