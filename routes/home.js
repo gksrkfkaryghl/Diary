@@ -15,8 +15,8 @@ router.get('/', function(request, response) {
     var title = 'My Own Diary';
     var text = 'Write about your today.';
     var html = template.HTML(title, text, `
-    <div>${feedback}</div>
-    <a href='/page/list'>list</a>
+    <div class="fmsg">${feedback}</div><br>
+    <a href='/page/list'>my diary</a>
     <a href='/page/write'>write</a><br>
     `, auth.statusUI(request, response));
     response.send(html);

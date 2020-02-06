@@ -14,11 +14,11 @@ module.exports = function(passport) {
         }
         var title = 'login';
         var html = template.HTML(title, `
-        <div>${feedback}</div>
-        <form action='/auth/login_process' method="post">
-        <p>id: <input type="text" name="id"></p>
-        <p>password: <input type="password" name="password"></p>
-        <input type="submit">
+        <div class="fmsg">${feedback}</div><br>
+        <form action='/auth/login_process' class="login" method="post">
+        ID : <input type="text" name="id" placeholder="ID">
+        <p>Password : <input type="password" name="password" placeholder="Password"></p>
+        <input type="submit" value="login">
         </form>
         `, '', '');
         response.send(html);
@@ -41,7 +41,7 @@ module.exports = function(passport) {
     router.post('/login_process', passport.authenticate('local', { 
         successRedirect: '/',
         failureRedirect: '/auth/login',
-        successFlash: 'Welcome.',
+        successFlash: true,
         failureFlash: 'Invalid username or password.'
     }));
 
@@ -54,13 +54,13 @@ module.exports = function(passport) {
         }
         var title = 'register';
         var html = template.HTML(title, `
-        <div>${feedback}</div>
-        <form action='/auth/register_process' method="post">
-        <p>id: <input type="text" name="id"></p>
-        <p>password: <input type="password" name="password"></p>
-        <p>password-conform: <input type="password" name="password2"></p>
-        <p>nickname: <input type="text" name="nickname"></p>
-        <input type="submit">
+        <div class="fmsg">${feedback}</div><br>
+        <form action='/auth/register_process' class="register" method="post">
+        ID : <input type="text" name="id" placeholder="ID">
+        <p>Password : <input type="password" name="password" placeholder="Password"></p>
+        <p>Confirm Password : <input type="password" name="password2" placeholder="Confirm Password"></p>
+        <p>Nickname : <input type="text" name="nickname" placeholder="Nickname"></p>
+        <input type="submit" value="register">
         </form>
         `, '', '');
         response.send(html);
@@ -72,6 +72,10 @@ module.exports = function(passport) {
         var pwd = post.password;
         var pwd2 = post.password2;
         var nickname = post.nickname;
+        if(!(id&&pwd&&pwd2&&nickname)) {
+            request.flash('error', 'Please fill out the form.')
+            response.redirect('/auth/register');
+        }
         if(pwd !== pwd2) {
             request.flash('error', 'Password should be the same.');
             response.redirect('/auth/register');

@@ -9,14 +9,19 @@ var db = require('../lib/db');
 
 
 router.get('/list', function(request, response) {
-    request.list = db.get('pages').value();
-    var list = template.List(request.list);
-    var title = "Diary List";
-    var html = template.HTML(title, list, `
-    <a href='/page/list'>list</a>
-    <a href='/page/write'>write</a>
-    `, auth.statusUI(request, response));
-    response.send(html);
+    if(!auth.isOwner(request, response)) {
+        response.redirect('/auth/login');
+    } else {
+        request.list = db.get('pages').value();
+        console.log('list', request.list);
+        var list = template.List(request.list, request.user);
+        var title = "My Diary";
+        var html = template.HTML(title, list, `
+        <a href='/page/list'>my diary</a>
+        <a href='/page/write'>write</a>
+        `, auth.statusUI(request, response));
+        response.send(html);
+    }
 });
 
 router.get('/write', function(request, response) {
@@ -24,10 +29,10 @@ router.get('/write', function(request, response) {
         response.redirect('/auth/login');
     } else {
         var title = 'Write';
-        var html = template.HTML(title, `
+        var html = template.HTMLControl(title, `
         <form action='/page/write_process' method="post">
-        <p>title: <input type="title" name="title"></p>
-        <p><textarea name='text' cols="80" rows="40" placeholder="How was your day?"></textarea></p>
+        <p><div class="date">* date <br><input type="date" class="form_date" name="date"></div></p>
+        <p><textarea name='text' placeholder="How was your day?"></textarea></p>
         <input type="submit" value="save">
         </form>
         `, '', auth.statusUI(request, response));
@@ -37,12 +42,12 @@ router.get('/write', function(request, response) {
 
 router.post('/write_process', function(request, response) {
     var post = request.body;
-    var title = post.title;
+    var date = post.date;
     var text = post.text;
     var id = ids.generate();
     db.get('pages').push({
         id:id,
-        title:title,
+        date:date,
         text:text,
         user_nickname: request.user.nickname,
         user_id: request.user.id
@@ -60,24 +65,24 @@ router.get('/update/:pageId', function(request, response){
             request.flash('error', 'Only the writer can access.');
             return response.redirect('/');
         }
-        var title = page.title;
+        var date = page.date;
         var text = page.text;
         var id = page.id;
-        var html = template.HTML(title,
+        var html = template.HTMLControl('',
             `
             <form action="/page/update_process" method="post">
             <input type="hidden" name="id" value="${id}">
-            <p><input type="text" name="title" placeholder="title" value="${title}"></p>
+            <p><div class="date">* date: <input type="date" class="form_date" name="date" value="${date}"></div></p>
             <p>
             <textarea name="text" placeholder="How was your day?">${text}</textarea>
             </p>
             <p>
-            <input type="submit">
+            <input type="submit" value="update">
             </p>
             </form>
             `,
             `<a href="/page/write">write</a> <a href="/page/${id}">update</a>`,
-            '', auth.statusUI(request, response)
+            auth.statusUI(request, response)
             );
         response.send(html);
     }
@@ -86,10 +91,10 @@ router.get('/update/:pageId', function(request, response){
 router.post('/update_process', function(request, response){
     var post = request.body;
     var id = post.id;
-    var title = post.title;
+    var date = post.date;
     var text = post.text;
     db.get('pages').find({id:id}).assign({
-        title:title, text:text
+        date:date, text:text
     }).write();
     response.redirect(`/page/${id}`)
 });
@@ -123,21 +128,21 @@ router.get('/:pageId', function(request, response) {
     var page = db.get('pages').find({
         id:request.params.pageId
     }).value();
-    var title = page.title;
+    var date = page.date;
     var text = page.text;
     var id = page.id;
     var user = db.get('users').find({
         nickname:page.user_nickname
     }).value();
-    var html = template.HTML(title, text, `
-    <a href='/page/list'>list</a>
+    var html = template.HTMLPage(date, text, `
+    <a href='/page/list'>my diary</a>
     <a href='/page/write'>write</a>
     <a href='/page/update/${id}'>update</a>
     <form action="/page/delete" method="post">
         <input type="hidden" name="id" value="${id}">
         <input type="submit" value="delete">
     </form>
-    <div>${feedback}</div>
+    <div class="fmsg">${feedback}</div><br>
     <div>writer: ${user.nickname}</div>
     `, auth.statusUI(request, response));
     response.send(html); 
