@@ -6,10 +6,10 @@ var session = require('express-session')
 var FileStore = require('session-file-store')(session)
 var flash = require('connect-flash');
 
-
-app.use(express.static('static'));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(compression());
+//app.use(express.static('./static/diary.css'));
+//app.use('http://localhost:3000/diary.css', express.static('./static/diary.css'));
 
 
 //아래는 session을 실제로 미들웨어로써 실제 이 앱에 설치하는 코드.

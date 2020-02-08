@@ -42,7 +42,7 @@ module.exports = function(passport) {
         successRedirect: '/',
         failureRedirect: '/auth/login',
         successFlash: true,
-        failureFlash: 'Invalid username or password.'
+        failureFlash: true
     }));
 
 
@@ -72,15 +72,61 @@ module.exports = function(passport) {
         var pwd = post.password;
         var pwd2 = post.password2;
         var nickname = post.nickname;
-        if(!(id&&pwd&&pwd2&&nickname)) {
-            request.flash('error', 'Please fill out the form.')
-            response.redirect('/auth/register');
-        }
-        if(pwd !== pwd2) {
-            request.flash('error', 'Password should be the same.');
-            response.redirect('/auth/register');
-        } else {
+        //*** the function that Checking user's information is not completed yet.***/
+        // var existingId = db.get('users').find({id:id}).value();
+        // var existingNickname = db.get('users').find({nickname:nickname}).value();
+        // users = db.get('users').value();
+        // var existingPwd = '';
+        // var i = 0;
+        // console.log(users[1]);
+        // while(i < users.length) {
+        //     bcrypt.compare(pwd, users[i].password, function(err, result) {
+        //         console.log('result: ', result);
+        //         if(result) {
+        //             existingPwd = true;
+        //         }
+        //     });
+        //     i++;
+        //     console.log('existingPwd: ', existingPwd);
+        // }
+        // console.log('22existingPwd: ', existingPwd);
+        // console.log('existingId: ', existingId);
+        // console.log('existingNickname: ', existingNickname);
+        // if(!(id&&pwd&&pwd2&&nickname)) {
+        //     console.log('error!!!!');
+        //     request.flash('error', 'Please fill out the form.')
+        //     response.redirect('/auth/register');
+        // } else if(existingId) {
+        //     console.log('error2!!!!');
+        //     request.flash('error', 'Your ID is already exist!')
+        //     response.redirect('/auth/register');
+        // } else if(existingNickname) {
+        //     console.log('error3!!!!');
+        //     request.flash('error', 'Your Nickname is already exist!')
+        //     response.redirect('/auth/register');
+        // } else if(pwd !== pwd2) {
+        //     console.log('error5!!!!');
+        //     request.flash('error', 'Password should be the same!');
+        //     response.redirect('/auth/register');
+        // } else if(existingPwd) {
+        //     request.flash('error', 'Your Password is already exist!')
+        //     return response.redirect('/auth/register');
+        // } else {
             bcrypt.hash(pwd, 8, function(err, hash) {
+                var puser = db.get('users').find({id:id}).value();
+                if(puser) {
+                    puser.password = hash;
+                    puser.nickname = nickname;
+                    db.get('users').find({id:id}).assign(puser).write();
+                } else {
+                    puser = {
+                        shortid: ids.generate(),
+                        id: id,
+                        password: hash,
+                        nickname: nickname
+                    }
+                    db.get('users').push(puser).write();
+                }
                 var user = {
                     shortid: ids.generate(),
                     id: id,
@@ -93,7 +139,7 @@ module.exports = function(passport) {
                     return response.redirect('/');
                 });
             });
-        }
+        // }
     });
     
     
